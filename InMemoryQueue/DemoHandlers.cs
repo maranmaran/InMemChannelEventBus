@@ -37,38 +37,21 @@ public sealed class TrackUserOrderItemsEventHandler : IEventHandler<OrderEvent>
     }
 }
 
-public sealed class DateEventHandler : IEventHandler<DateTime>
+public sealed class OrderNumberEventHandler : IEventHandler<int>
 {
-    private readonly ITraceDependency _logger;
+    private readonly IEventContextAccessor<int> _ctx;
+    private readonly ILogger<OrderNumberEventHandler> _logger;
 
-    public DateEventHandler(ITraceDependency logger)
+    public OrderNumberEventHandler(IEventContextAccessor<int> ctx, ILogger<OrderNumberEventHandler> logger)
     {
+        _ctx = ctx;
         _logger = logger;
     }
 
-    public ValueTask Handle(DateTime time, CancellationToken cancellationToken = default)
+    public ValueTask Handle(int orderNumber, CancellationToken cancellationToken = default)
     {
-        _logger.Log(time);
+        var correlationId = _ctx.Event.Metadata!.CorrelationId;
+        _logger.LogInformation("Order number {0} invoked with correlation id {1}", orderNumber, correlationId);
         return ValueTask.CompletedTask;
-    }
-}
-
-public interface ITraceDependency
-{
-    public void Log(DateTime time);
-}
-
-public class TraceDependency : ITraceDependency
-{
-    private readonly ILogger<TraceDependency> _logger;
-
-    public TraceDependency(ILogger<TraceDependency> logger)
-    {
-        _logger = logger;
-    }
-
-    public void Log(DateTime time)
-    {
-        _logger.LogInformation("Triggered at {0}, but processing of event triggered at {1}", time, DateTime.UtcNow);
     }
 }

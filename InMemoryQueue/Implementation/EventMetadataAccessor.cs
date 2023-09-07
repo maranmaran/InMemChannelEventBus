@@ -6,7 +6,7 @@ internal sealed class EventContextAccessor<T> : IEventContextAccessor<T>
 {
     private static readonly AsyncLocal<EventMetadataWrapper<T>> Holder = new();
 
-    public Event<T> Event => Holder.Value?.Event;
+    public Event<T>? Event => Holder.Value?.Event;
 
     public void Set(Event<T> @event)
     {
@@ -22,5 +22,5 @@ internal sealed class EventContextAccessor<T> : IEventContextAccessor<T>
 
 internal sealed class EventMetadataWrapper<T>
 {
-    public Event<T> Event { get; set; }
+    public Event<T>? Event { get; set; }
 }

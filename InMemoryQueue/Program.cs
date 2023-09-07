@@ -7,31 +7,28 @@ using Microsoft.Extensions.Logging;
 var services = new ServiceCollection();
 services.AddLogging(b => b.AddSimpleConsole());
 
-// Test scoped dependency that will be consumed in DateEventHandler
-services.AddScoped<ITraceDependency, TraceDependency>();
-
 // Register queue services
-services.AddInMemoryEvent<DateTime, DateEventHandler>();
+services.AddInMemoryEvent<int, OrderNumberEventHandler>();
 services.AddInMemoryEvent<OrderEvent, OrderPlacedEventHandler>();
 services.AddInMemoryEvent<OrderEvent, TrackUserOrderItemsEventHandler>();
 
 var provider = services.BuildServiceProvider();
 var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("Program");
 
-var dateProducer = provider.GetRequiredService<IProducer<DateTime>>();
+var orderNumberProducer = provider.GetRequiredService<IProducer<int>>();
 var orderProducer = provider.GetRequiredService<IProducer<OrderEvent>>();
 var publishEventsFn = async (int i) =>
 {
-    var dateTask = new Event<DateTime>(DateTime.UtcNow);
-    var counterTask = new Event<OrderEvent>(new OrderEvent(i, i, i));
+    var metadata = new EventMetadata(Guid.NewGuid().ToString());
 
-    await dateProducer.Publish(dateTask).ConfigureAwait(false);
+    var orderNumberTask = new Event<int>(i, metadata);
+    var counterTask = new Event<OrderEvent>(new OrderEvent(i, i, i), metadata);
+
+    await orderNumberProducer.Publish(orderNumberTask).ConfigureAwait(false);
     await orderProducer.Publish(counterTask).ConfigureAwait(false);
 };
 
 await provider.StartConsumers();
-
-Console.ReadKey();
 
 for (var i = 0; i < 3; i++)
 {
@@ -47,6 +44,7 @@ logger.LogInformation("\nConsumers stopped\n");
 for (var i = 3; i < 8; i++)
 {
     await publishEventsFn.Invoke(i);
+    logger.LogInformation("Queued {0}, but consumers are not running yet", i);
 }
 
 // start the consumers

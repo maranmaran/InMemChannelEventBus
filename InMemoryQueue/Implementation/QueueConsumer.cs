@@ -35,7 +35,7 @@ internal sealed class InMemoryQueueConsumer<T> : IConsumer<T>
 
         // retrieve scoped dependencies
         var handlers = scope.ServiceProvider.GetServices<IEventHandler<T>>().ToList();
-        var metadataAccessor = scope.ServiceProvider.GetRequiredService<IEventContextAccessor<T>>();
+        var contextAccessor = scope.ServiceProvider.GetRequiredService<IEventContextAccessor<T>>();
 
         if (handlers.FirstOrDefault() is null)
         {
@@ -44,7 +44,7 @@ internal sealed class InMemoryQueueConsumer<T> : IConsumer<T>
         }
 
         Task.Run(
-            async () => await StartProcessing(handlers, metadataAccessor).ConfigureAwait(false),
+            async () => await StartProcessing(handlers, contextAccessor).ConfigureAwait(false),
             _stoppingToken!.Token
         ).ConfigureAwait(false);
     }
@@ -61,32 +61,33 @@ internal sealed class InMemoryQueueConsumer<T> : IConsumer<T>
 
     internal async ValueTask StartProcessing(List<IEventHandler<T>> handlers, IEventContextAccessor<T> contextAccessor)
     {
-        var continuousChannelIterator = _queue.ReadAllAsync(_stoppingToken.Token)
+        var continuousChannelIterator = _queue.ReadAllAsync(_stoppingToken!.Token)
             .WithCancellation(_stoppingToken.Token)
             .ConfigureAwait(false);
 
         await foreach (var task in continuousChannelIterator)
         {
             if (_stoppingToken.IsCancellationRequested)
-            {
                 break;
-            }
-
-            contextAccessor.Set(task); // set metadata and begin scope
-            using var logScope = _logger.BeginScope(task.Metadata);
 
             // invoke handlers in parallel
             await Parallel.ForEachAsync(handlers, _stoppingToken.Token,
-                (handler, scopedToken) =>
-                {
-                    Task.Run(
-                        async () => await handler.Handle(task.Data, scopedToken), scopedToken
-                    ).ConfigureAwait(false);
-
-                    return ValueTask.CompletedTask;
-                }
+                async (handler, scopedToken) => await ExecuteHandler(handler, task, contextAccessor, scopedToken)
+                    .ConfigureAwait(false)
             ).ConfigureAwait(false);
         }
+    }
+
+    internal ValueTask ExecuteHandler(IEventHandler<T> handler, Event<T> task, IEventContextAccessor<T> ctx, CancellationToken token)
+    {
+        ctx.Set(task); // set metadata and begin scope
+        using var logScope = _logger.BeginScope(task.Metadata ?? new EventMetadata(Guid.NewGuid().ToString()));
+
+        Task.Run(
+            async () => await handler.Handle(task.Data, token), token
+        ).ConfigureAwait(false);
+
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask Stop(CancellationToken _ = default)

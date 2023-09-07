@@ -2,7 +2,6 @@
 using InMemoryQueue.Contracts;
 using InMemoryQueue.Implementation;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace InMemoryQueue.Registration;
@@ -36,7 +35,7 @@ public static class Setup
         services.AddSingleton(typeof(IConsumer<T>), consumerFactory.Invoke);
 
         // typed event context accessor
-        services.TryAddSingleton(typeof(IEventContextAccessor<>), typeof(EventContextAccessor<>));
+        services.AddSingleton(typeof(IEventContextAccessor<T>), typeof(EventContextAccessor<T>));
 
         return services;
     }
