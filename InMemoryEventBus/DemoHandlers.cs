@@ -1,7 +1,7 @@
-﻿using InMemoryQueue.Contracts;
+﻿using InMemoryEventBus.Contracts;
 using Microsoft.Extensions.Logging;
 
-namespace InMemoryQueue;
+namespace InMemoryEventBus;
 
 public sealed record OrderEvent(int OrderNumber, int ItemCount, int UserId);
 

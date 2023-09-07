@@ -1,6 +1,6 @@
-﻿using InMemoryQueue.Contracts;
+﻿using InMemoryEventBus.Contracts;
 
-namespace InMemoryQueue.Implementation;
+namespace InMemoryEventBus.Implementation;
 
 internal sealed class EventContextAccessor<T> : IEventContextAccessor<T>
 {

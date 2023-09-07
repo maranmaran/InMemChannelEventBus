@@ -1,4 +1,4 @@
-﻿namespace InMemoryQueue.Contracts;
+﻿namespace InMemoryEventBus.Contracts;
 
 public record EventMetadata(string CorrelationId);
 public record Event<T>(T? Data, EventMetadata? Metadata = default);
@@ -12,7 +12,7 @@ public interface IEventHandler<in T>
 }
 
 /// <summary>
-/// Starts processing our queue
+/// Starts processing our bus
 /// We can manipulate Subscribe and Unsubscribe methods to
 /// turn processing on or off
 /// </summary>

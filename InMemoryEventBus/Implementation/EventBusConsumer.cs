@@ -1,28 +1,28 @@
 ﻿using System.Threading.Channels;
-using InMemoryQueue.Contracts;
+using InMemoryEventBus.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #pragma warning disable CS4014
 
-namespace InMemoryQueue.Implementation;
+namespace InMemoryEventBus.Implementation;
 
-internal sealed class InMemoryQueueConsumer<T> : IConsumer<T>
+internal sealed class InMemoryEventBusConsumer<T> : IConsumer<T>
 {
-    private readonly ChannelReader<Event<T>> _queue;
+    private readonly ChannelReader<Event<T>> _bus;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<InMemoryQueueConsumer<T>> _logger;
+    private readonly ILogger<InMemoryEventBusConsumer<T>> _logger;
 
     private CancellationTokenSource? _stoppingToken;
 
-    public InMemoryQueueConsumer(
-        ChannelReader<Event<T>> queue,
+    public InMemoryEventBusConsumer(
+        ChannelReader<Event<T>> bus,
         IServiceScopeFactory scopeFactory,
-        ILogger<InMemoryQueueConsumer<T>> logger
+        ILogger<InMemoryEventBusConsumer<T>> logger
     )
     {
         _logger = logger;
-        _queue = queue;
+        _bus = bus;
         _scopeFactory = scopeFactory;
     }
 
@@ -61,7 +61,7 @@ internal sealed class InMemoryQueueConsumer<T> : IConsumer<T>
 
     internal async ValueTask StartProcessing(List<IEventHandler<T>> handlers, IEventContextAccessor<T> contextAccessor)
     {
-        var continuousChannelIterator = _queue.ReadAllAsync(_stoppingToken!.Token)
+        var continuousChannelIterator = _bus.ReadAllAsync(_stoppingToken!.Token)
             .WithCancellation(_stoppingToken.Token)
             .ConfigureAwait(false);
 
@@ -78,6 +78,9 @@ internal sealed class InMemoryQueueConsumer<T> : IConsumer<T>
         }
     }
 
+    /// <summary>
+    /// Executes the handler in async scope
+    /// </summary>
     internal ValueTask ExecuteHandler(IEventHandler<T> handler, Event<T> task, IEventContextAccessor<T> ctx, CancellationToken token)
     {
         ctx.Set(task); // set metadata and begin scope

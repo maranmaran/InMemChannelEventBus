@@ -1,13 +1,13 @@
-using InMemoryQueue;
-using InMemoryQueue.Contracts;
-using InMemoryQueue.Registration;
+using InMemoryEventBus;
+using InMemoryEventBus.Contracts;
+using InMemoryEventBus.Registration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 var services = new ServiceCollection();
 services.AddLogging(b => b.AddSimpleConsole());
 
-// Register queue services
+// Register bus services
 services.AddInMemoryEvent<int, OrderNumberEventHandler>();
 services.AddInMemoryEvent<OrderEvent, OrderPlacedEventHandler>();
 services.AddInMemoryEvent<OrderEvent, TrackUserOrderItemsEventHandler>();
@@ -40,11 +40,11 @@ await Task.Delay(TimeSpan.FromSeconds(3));
 await provider.StopConsumers();
 logger.LogInformation("\nConsumers stopped\n");
 
-// queue some more events while the consumers are stopped
+// bus some more events while the consumers are stopped
 for (var i = 3; i < 8; i++)
 {
     await publishEventsFn.Invoke(i);
-    logger.LogInformation("Queued {0}, but consumers are not running yet", i);
+    logger.LogInformation("EventBusd {0}, but consumers are not running yet", i);
 }
 
 // start the consumers
