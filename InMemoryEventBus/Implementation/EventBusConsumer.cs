@@ -28,7 +28,7 @@ internal sealed class InMemoryEventBusConsumer<T> : IConsumer<T>
 
     public async ValueTask Start(CancellationToken token = default)
     {
-        EnsureStoppingTokenIsCreated();
+        EnsureStoppingTokenIsCreated(token);
 
         // factory new scope so we can use it as execution context
         await using var scope = _scopeFactory.CreateAsyncScope();
@@ -49,14 +49,14 @@ internal sealed class InMemoryEventBusConsumer<T> : IConsumer<T>
         ).ConfigureAwait(false);
     }
 
-    private void EnsureStoppingTokenIsCreated()
+    private void EnsureStoppingTokenIsCreated(CancellationToken token = default)
     {
         if (_stoppingToken is not null && _stoppingToken.IsCancellationRequested == false)
         {
             _stoppingToken.Cancel();
         }
 
-        _stoppingToken = new CancellationTokenSource();
+        _stoppingToken = token.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(token) : new CancellationTokenSource();
     }
 
     internal async ValueTask StartProcessing(List<IEventHandler<T>> handlers, IEventContextAccessor<T> contextAccessor)
